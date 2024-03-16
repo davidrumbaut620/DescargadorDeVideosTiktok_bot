@@ -11,7 +11,7 @@ logging.getLogger().setLevel(logging.CRITICAL)
 load_dotenv()
 
 api = Scraper()
-token = os.getenv("TOKEN")
+token = os.getenv("7168708760:AAE5vIpLYwjeAQLuUEXIQexADCFN6JuCpQQ")
 BOT_USERNAME = '@DescargadorDeVideosTiktok_bot'
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

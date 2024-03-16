@@ -1,5 +1,5 @@
 from telegram import Update, InputFile
-from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from io import BytesIO
 import os
 import requests
@@ -7,23 +7,23 @@ from douyin_tiktok_scraper.scraper import Scraper
 from dotenv import load_dotenv
 import logging
 
-logging.basicConfig(level=logging.CRITICAL)
+logging.getLogger().setLevel(logging.CRITICAL)
 load_dotenv()
 
 api = Scraper()
 token = os.getenv("TOKEN")
 BOT_USERNAME = '@DescargadorDeVideosTiktok_bot'
 
-async def start_command(update, context):
-    await update.message.reply_text('Hola, visita nuestra web en: https://technoh4ckstutoriales.blogspot.com/')
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Hola visita nuestra web en: https://technoh4ckstutoriales.blogspot.com/')
 
-async def help_command(update, context):
-    await update.message.reply_text('Por favor escribe algo para que pueda responder')
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Por favor escriba algo para que pueda responder')
 
-async def custom_command(update, context):
+async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Este es un comando personalizado')
 
-async def hybrid_parsing(url):
+async def hybrid_parsing(url: str) -> dict:
     try:
         # Hybrid parsing(Douyin/TikTok URL)
         result = await api.hybrid_parsing(url)
@@ -57,14 +57,14 @@ async def hybrid_parsing(url):
 
     return video_stream, video_stream_hq, music, caption, video_hq
 
-async def handle_message(update, context):
-    message_type = update.message.chat.type
-    text = update.message.text
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message_type: str = update.message.chat.type
+    text: str = update.message.text
 
     print(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
     if message_type == 'group':
         if BOT_USERNAME in text:
-            new_text = text.replace(BOT_USERNAME, '').strip()
+            new_text: str = text.replace(BOT_USERNAME, '').strip()
         else:
             return
     elif message_type == 'private':
@@ -89,25 +89,42 @@ async def handle_message(update, context):
                         await update.message.reply_text(text_link)
 
             else:
-                await update.message.reply_text("Por favor envía solo una URL de Tiktok")
+                await update.message.reply_text("Por favor envíe solo una URL de Tiktok")
         else:
-            await update.message.reply_text("Por favor envía una URL de Tiktok")
+            await update.message.reply_text("Por favor envíe una URL de Tiktok")
             return
 
-async def error(update, context):
+async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update {update} caused error {context.error}')
 
-if __name__ == '__main__':
+if name == 'main':
     print('Starting bot...')
-    updater = Updater(token, use_context=True)
-    dispatcher = updater.dispatcher
+    app = Application.builder().token(token).build()
 
-    dispatcher.add_handler(CommandHandler('start', start_command))
-    dispatcher.add_handler(CommandHandler('help', help_command))
-    dispatcher.add_handler(CommandHandler('custom', custom_command))
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_message))
-    dispatcher.add_handler(MessageHandler(Filters.voice, handle_message))
-    dispatcher.add_error_handler(error)
+    
+def handler(event, context):
+    update = Update.de_json(event['body'], bot)
+    dispatcher.process_update(update)
 
-    updater.start_polling()
-    updater.idle()
+# Configurar comandos y manejo de mensajes...
+dispatcher = Dispatcher(bot, None, workers=0)
+dispatcher.add_handler(CommandHandler('start', start_command))
+dispatcher.add_handler(CommandHandler('help', help_command))
+dispatcher.add_handler(CommandHandler('custom', custom_command))
+# Añadir más handlers si es necesario...
+
+    # Commands
+    app.add_handler(CommandHandler('start', start_command))
+    app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('custom', custom_command))
+
+    # Messages
+     app.add_handler(MessageHandler(filters.TEXT, handle_message))
+    app.add_handler(MessageHandler(filters.VOICE, handle_message))
+
+    # Errors
+    app.add_error_handler(error)
+
+    # Polls the bot
+    print('Polling...')
+    app.run_polling(poll_interval=3)
